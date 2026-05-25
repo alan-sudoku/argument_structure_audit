@@ -1,6 +1,6 @@
 # Argument Structure Audit
 
-A structured audit method for structured argument documents. It verifies that a document's argument is correctly encoded — claims are visible, content types are distinct, consequence is explicit, and the document is navigable by a blank AI receiver without full linear parsing.
+An audit method for structured argument documents. It verifies that a document's argument is correctly encoded — claims are visible, content types are distinct, consequence is explicit, and the document is navigable by a blank AI receiver without full linear parsing.
 
 ---
 
