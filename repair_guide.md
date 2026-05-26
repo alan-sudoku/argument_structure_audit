@@ -127,23 +127,23 @@ The T1 execution strip already flags AI-generated repairs as T2-review candidate
 
 ```mermaid
 flowchart TD
-    A["T1 finding\nidentified"] --> B{"Mechanical\nor generative?"}
-    B -->|"Mechanical"| C["Apply directly\nto source"]
-    B -->|"Generative"| D["Write\nstaging block"]
-    D --> E["Audit check\nCLAIM-FIRST /\nCONSEQUENCE /\nstructural"]
+    A["T1 finding<br>identified"] --> B{"Mechanical<br>or generative?"}
+    B -->|"Mechanical"| C["Apply directly<br>to source"]
+    B -->|"Generative"| D["Write<br>staging block"]
+    D --> E["Audit check<br>CLAIM-FIRST /<br>CONSEQUENCE /<br>structural"]
     E -->|"Fail"| D
-    E -->|"Pass"| F["Pre-commit:\nblast radius +\ncross-refs"]
-    F --> G["Commit\nto source"]
+    E -->|"Pass"| F["Pre-commit:<br>blast radius +<br>cross-refs"]
+    F --> G["Commit<br>to source"]
     C --> G
-    G --> H{"AI-generated\ncontent?"}
-    H -->|"Yes"| I["Apply\n[T2 review pending]"]
-    H -->|"No"| J["Collapse\nstaging entry"]
+    G --> H{"AI-generated<br>content?"}
+    H -->|"Yes"| I["Apply<br>[T2 review pending]"]
+    H -->|"No"| J["Collapse<br>staging entry"]
     I --> J
     J --> K["Test gate"]
-    K -->|"CRITICAL"| L["Fix\nfindings"]
+    K -->|"CRITICAL"| L["Fix<br>findings"]
     L --> K
     K -->|"Pass"| M["Next repair"]
-    M -.->|"async"| N["T2 reviewer\nclears markers"]
+    M -.->|"async"| N["T2 reviewer<br>clears markers"]
 ```
 
 For mechanical sentence-order repairs (existing sentence moved, no new content generated), the `*[T2 review pending]*` flag may be omitted if the moved sentence's content is unchanged — the staging audit confirms the sentence passes the check; no domain judgment is introduced. State this explicitly in the collapsed entry.
