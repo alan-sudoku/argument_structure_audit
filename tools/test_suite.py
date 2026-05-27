@@ -35,6 +35,15 @@ sys.path.insert(0, str(_here))
 from extract_graph import parse_document, build_graph, scan_declared_types
 from t1_check import collect_results, run_all
 import networkx as nx
+from query import (
+    cmd_orphans, cmd_subgraph, cmd_descendants, cmd_cycles,
+    cmd_density, cmd_mece,
+)
+try:
+    from query import cmd_ancestors, cmd_chain
+    _HAS_ANCESTORS = True
+except ImportError:
+    _HAS_ANCESTORS = False
 
 
 # ---------------------------------------------------------------------------
@@ -215,19 +224,6 @@ class TestT1Check(unittest.TestCase):
 # 3. query.py command tests
 # ---------------------------------------------------------------------------
 
-# Import query commands directly rather than via subprocess.
-from query import (
-    cmd_orphans, cmd_subgraph, cmd_descendants, cmd_cycles,
-    cmd_density, cmd_mece,
-)
-# cmd_ancestors and cmd_chain imported separately to handle the broken-function
-# state in query.py (both exist but ancestors has no def line — confirmed working).
-try:
-    from query import cmd_ancestors, cmd_chain
-    _HAS_ANCESTORS = True
-except ImportError:
-    _HAS_ANCESTORS = False
-
 
 class TestQueryCommands(unittest.TestCase):
 
@@ -253,7 +249,7 @@ class TestQueryCommands(unittest.TestCase):
     def test_cmd_density_has_section_row(self):
         out = self._capture(cmd_density, self.G)
         # At least one section row should appear after the header line
-        lines = [l for l in out.splitlines() if l.strip() and not l.startswith("-")]
+        lines = [ln for ln in out.splitlines() if ln.strip() and not ln.startswith("-")]
         self.assertGreater(len(lines), 1)
 
     def test_cmd_subgraph_valid_slug(self):
