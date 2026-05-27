@@ -37,6 +37,12 @@ For repairs that rewrite or reorder prose, use `repair_guide.md` to stage, audit
 
 ---
 
+## Tools
+
+Machine-assisted graph extraction and T1 checking are in [`tools/`](tools/). See [`tools/README.md`](tools/README.md) for installation, usage, and visualisation instructions.
+
+---
+
 ## Files
 
 | File | Role |
