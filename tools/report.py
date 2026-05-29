@@ -199,7 +199,7 @@ def _render_top_nodes(G, n=5):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser(
         description="Emit a Markdown audit report for a typed argument document."
     )
@@ -209,7 +209,7 @@ def main():
         action="store_true",
         help="Include full per-finding detail (default: summary mode)",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     try:
         text = Path(args.document).read_text(encoding="utf-8")

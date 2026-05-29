@@ -32,6 +32,7 @@ import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterator
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +81,31 @@ CONVENTION_RE = re.compile(r"numbered.{0,30}bold.{0,30}claim", re.I)
 # The four valid content types from specification.md §3.
 VALID_TYPES = {"Claim", "Scope", "Argument", "Closure"}
 
+# Section headings (### level) whose list items are not argument sub-items —
+# TYPE-LABEL does not apply to them. Matched as prefix to cover variants like
+# "Open questions — OQ1.1, OQ1.2" alongside "Open questions index".
+TYPE_LABEL_EXEMPT_SECTION_PREFIXES = (
+    "Open questions",   # OQ index entries and per-principle OQ lists
+    "Grounding",        # named-field items: "**Formal logic** — ..."
+)
+
+# Body-level exempt patterns — list items that are definitional/notational,
+# not argument sub-items, regardless of section:
+#   **Bold-lead** — named definition entries (Set A, Set B, symbol tables)
+#   `backtick`    — epistemic key / notation key entries
+#   (N) / (a)     — numbered sub-clauses in proposition lists
+#   $LaTeX        — symbol/notation table rows
+#   *Italic-lead* — named term glossaries (not *Type (Topic):* form)
+TYPE_LABEL_EXEMPT_BODY = re.compile(
+    r"^(\*\*"               # **Bold lead
+    r"|\`"                  # `backtick lead
+    r"|\([0-9a-z]\)"        # (1), (a), (b) numbered sub-clause
+    r"|\$"                  # $LaTeX symbol rows
+    r"|\*\([A-Z]"           # *(X) epistemic key entries e.g. *(C) Conjecture*
+    r"|\*[^(]"              # *Italic* not followed by "(" — named term, not TYPE-LABEL
+    r")"
+)
+
 # Lead sentence patterns that are structurally non-claim starts.
 # These indicate the block opens with a condition, qualification, or universal
 # quantifier rather than a standalone claim — a detectable CLAIM-FIRST failure.
@@ -117,50 +143,46 @@ class Finding:
 # Shared document iterators
 # ---------------------------------------------------------------------------
 
-# fence-skipping iterator — standalone duplicate of test_doc_quality.py pattern.
-# Both files are standalone scripts (no shared imports), so this is intentionally
-# duplicated rather than imported.
-def _iter_prose(lines):
+def _filter_fenced_blocks(lines: list[str]) -> Iterator[tuple[int, str]]:
     """Yield (1-based lineno, line) for all lines outside fenced code blocks."""
     in_fence = False
     fence_marker = ""
     for i, line in enumerate(lines, 1):
         stripped = line.strip()
-        if not in_fence and FENCE_RE.match(stripped):
+        m = FENCE_RE.match(stripped)
+        if not in_fence and m:
             in_fence = True
-            fence_marker = stripped[:3]
-            continue
-        if in_fence and stripped.startswith(fence_marker):
-            in_fence = False
-            continue
-        if not in_fence:
-            yield i, line
-
-
-def _extract_headings(lines):
-    """Return [(level, text, lineno)] for all headings outside code blocks."""
-    result = []
-    in_fence = False
-    fence_marker = ""
-    for i, line in enumerate(lines, 1):
-        stripped = line.strip()
-        if not in_fence and FENCE_RE.match(stripped):
-            in_fence = True
-            fence_marker = stripped[:3]
-            continue
-        if in_fence and stripped.startswith(fence_marker):
-            in_fence = False
+            fence_marker = m.group(1)
             continue
         if in_fence:
+            if stripped.startswith(fence_marker):
+                in_fence = False
             continue
+        yield i, line
+
+
+def _iter_prose(lines: list[str]) -> Iterator[tuple[int, str]]:
+    """Yield (1-based lineno, line) for all lines outside fenced code blocks."""
+    return _filter_fenced_blocks(lines)
+
+
+def _extract_headings(lines: list[str]) -> list[tuple[int, str, int]]:
+    """Return [(level, text, lineno)] for all headings outside code blocks."""
+    result = []
+    for lineno, line in _filter_fenced_blocks(lines):
         m = HEADING_RE.match(line)
         if m:
-            result.append((len(m.group(1)), m.group(2).strip(), i))
+            result.append((len(m.group(1)), m.group(2).strip(), lineno))
     return result
 
 
-def _split_sentences(text):
+def _split_sentences(text: str) -> list[str]:
     """Split prose into sentences using the punctuation-capital heuristic.
+
+    Known limitation: splits incorrectly on abbreviations and inline references
+    — e.g. "e.g. This", "Fig. 1", "Section 3.1. The" produce spurious splits.
+    No stdlib fix without NLP. Callers should treat split boundaries as
+    approximate; false splits produce extra short sentences, not missed ones.
 
     >>> _split_sentences("X holds. Because Y follows.")
     ['X holds.', 'Because Y follows.']
@@ -178,7 +200,7 @@ def _split_sentences(text):
     return [p.strip() for p in parts if p.strip()]
 
 
-def _extract_definition_items(lines):
+def _extract_definition_items(lines: list[str]) -> list[tuple[str, int]]:
     """Return [(text, lineno)] for all definition items (numbered bold, **Claim:**).
 
     Definition items can span multiple continuation lines, so this accumulator
@@ -189,8 +211,6 @@ def _extract_definition_items(lines):
     standalone claim without requiring the reader to continue into the body.
     """
     items = []
-    in_fence = False
-    fence_marker = ""
     accumulating = None
     acc_lineno = 0
     acc_lines = []
@@ -200,19 +220,8 @@ def _extract_definition_items(lines):
             text = " ".join(acc_lines).strip()
             items.append((text, acc_lineno))
 
-    for i, line in enumerate(lines, 1):
+    for i, line in _filter_fenced_blocks(lines):
         stripped = line.rstrip()
-        if not in_fence and FENCE_RE.match(stripped.strip()):
-            in_fence = True
-            fence_marker = stripped.strip()[:3]
-            flush()
-            accumulating = None
-            acc_lines = []
-            continue
-        if in_fence:
-            if stripped.strip().startswith(fence_marker):
-                in_fence = False
-            continue
 
         nm = NUMBERED_RE.match(stripped)
         bcm = BOLD_CLAIM_RE.match(stripped)
@@ -224,7 +233,6 @@ def _extract_definition_items(lines):
             acc_lineno = i
             acc_lines = [nm.group(3).strip() if nm else bcm.group(1).strip()]
         elif sm:
-            # Sub-items belong to a definition item's children, not its body.
             flush()
             accumulating = None
             acc_lines = []
@@ -239,30 +247,29 @@ def _extract_definition_items(lines):
     return items
 
 
-def _extract_sub_items(lines):
-    """Return [(indent, body, lineno)] for all list items outside code blocks.
+def _extract_sub_items(lines: list[str]) -> list[tuple[int, str, int, str]]:
+    """Return [(indent, body, lineno, section)] for all list items outside code blocks.
 
-    Indent is the number of leading spaces; body is the text after "- ".
+    Indent is the number of leading spaces; body is the text after "- ";
+    section is the text of the most recent ### heading (stripped of LaTeX and
+    leading symbols) so callers can apply section-level scope-out rules.
     CONSEQUENCE, TYPE-LABEL, and RC2 checks all operate at the sub-item level.
     """
     items = []
-    in_fence = False
-    fence_marker = ""
-    for i, line in enumerate(lines, 1):
-        stripped = line.rstrip()
-        if not in_fence and FENCE_RE.match(stripped.strip()):
-            in_fence = True
-            fence_marker = stripped.strip()[:3]
-            continue
-        if in_fence:
-            if stripped.strip().startswith(fence_marker):
-                in_fence = False
-            continue
+    current_section = ""
+    for lineno, line in _filter_fenced_blocks(lines):
+        hm = HEADING_RE.match(line)
+        if hm and len(hm.group(1)) == 3:
+            raw = hm.group(2).strip()
+            raw = re.sub(r"\$[^$]*\$", "", raw)
+            raw = re.sub(r"\\mathsf\{[^}]*\}", "", raw)
+            raw = re.sub(r"^[^a-zA-Z]+", "", raw)
+            current_section = raw.strip()
         m = SUBITEM_RE.match(line)
         if m:
             indent = len(m.group(1))
             body = m.group(2).strip()
-            items.append((indent, body, i))
+            items.append((indent, body, lineno, current_section))
     return items
 
 
@@ -270,7 +277,7 @@ def _extract_sub_items(lines):
 # T1 checks
 # ---------------------------------------------------------------------------
 
-def check_rc1(lines, rel):
+def check_rc1(lines: list[str], rel: str) -> list[Finding]:
     """RC1 — Heading Hierarchy (precondition gate for Phase 1).
 
     A skipped heading level (e.g. ## → ####) breaks the structural hierarchy
@@ -295,7 +302,7 @@ def check_rc1(lines, rel):
     return findings
 
 
-def check_content_type(lines, rel):
+def check_content_type(lines: list[str], rel: str) -> list[Finding]:
     """CONTENT-TYPE — Visual separation of content types (Phase 1).
 
     Arguments and Closures at the same visual weight as Claims force the reader
@@ -328,7 +335,7 @@ def check_content_type(lines, rel):
     return findings
 
 
-def check_claim_first(lines, rel):
+def check_claim_first(lines: list[str], rel: str) -> list[Finding]:
     """CLAIM-FIRST — Inverted pyramid at the definition-item level (Phase 1).
 
     The first sentence of each definition item must be a standalone claim the
@@ -378,7 +385,7 @@ def check_claim_first(lines, rel):
     return findings
 
 
-def check_consequence(lines, rel):
+def check_consequence(lines: list[str], rel: str) -> list[Finding]:
     """CONSEQUENCE — Consequence sentence at the end of each sub-item (Phase 3).
 
     The last sentence must state what is now ruled out, permitted, required, or
@@ -391,7 +398,7 @@ def check_consequence(lines, rel):
     """
     findings = []
     sub_items = _extract_sub_items(lines)
-    for indent, body, lineno in sub_items:
+    for indent, body, lineno, _section in sub_items:
         sentences = _split_sentences(body)
         if not sentences:
             continue
@@ -425,7 +432,7 @@ def check_consequence(lines, rel):
     return findings
 
 
-def check_type_label(lines, rel):
+def check_type_label(lines: list[str], rel: str) -> list[Finding]:
     """TYPE-LABEL — Label function check for all sub-items (Phase 4).
 
     Every sub-item must open with *[Type] ([Topic]):* where Type is one of
@@ -436,7 +443,14 @@ def check_type_label(lines, rel):
     """
     findings = []
     sub_items = _extract_sub_items(lines)
-    for indent, body, lineno in sub_items:
+    for indent, body, lineno, section in sub_items:
+        # Skip items in exempt sections (OQ lists, Grounding field lists).
+        if any(section.startswith(p) for p in TYPE_LABEL_EXEMPT_SECTION_PREFIXES):
+            continue
+        # Skip items whose body pattern identifies them as non-argument items
+        # (notation tables, epistemic key entries, numbered sub-clauses, etc.).
+        if TYPE_LABEL_EXEMPT_BODY.match(body):
+            continue
         m = LABEL_RE.match(body)
         if not m:
             findings.append(Finding(
@@ -459,7 +473,7 @@ def check_type_label(lines, rel):
     return findings
 
 
-def check_rc2(lines, rel):
+def check_rc2(lines: list[str], rel: str) -> list[Finding]:
     """RC2 — List structure for typed sub-items (post-Phase 4 encoding check).
 
     TYPE-LABEL ensures sub-items carry the right label. RC2 ensures they are
@@ -486,7 +500,7 @@ def check_rc2(lines, rel):
     return findings
 
 
-def check_rc3(lines, rel):
+def check_rc3(lines: list[str], rel: str) -> list[Finding]:
     """RC3 — Numbered item type convention (post-Phase 4 encoding check).
 
     When a document uses numbered bold items (e.g. "1. **Entailment map**"),
@@ -537,7 +551,7 @@ SEV_LABEL = {
 # Output helpers
 # ---------------------------------------------------------------------------
 
-def _print_findings(findings):
+def _print_findings(findings: list[Finding]) -> None:
     """Print severity-sorted findings in the same format as test_doc_quality.py."""
     for f in sorted(findings):
         tag = SEV_LABEL.get(f.severity, f.severity)
@@ -545,7 +559,7 @@ def _print_findings(findings):
         print(f"           {f.note}")
 
 
-def collect_results(lines, rel):
+def collect_results(lines: list[str], rel: str) -> dict[str, tuple[list[Finding], dict[str, int]]]:
     """Run all T1 checks in phase order and return results dict.
 
     Returns {check_name: (findings, counts)} where counts is
@@ -561,7 +575,7 @@ def collect_results(lines, rel):
     return check_results
 
 
-def _print_check_block(name, findings, counts):
+def _print_check_block(name: str, findings: list[Finding], counts: dict[str, int]) -> None:
     """Print the per-check status block to stdout."""
     fails     = [f for f in findings if f.result == "Fail"]
     escalated = [f for f in findings if f.result == "Escalated"]
@@ -583,7 +597,7 @@ def _print_check_block(name, findings, counts):
     print()
 
 
-def _print_summary(check_results):
+def _print_summary(check_results: dict[str, tuple[list[Finding], dict[str, int]]]) -> int:
     """Print the totals line and Markdown summary table."""
     total_c = sum(v.get("CRITICAL", 0)    for _, v in check_results.values())
     total_s = sum(v.get("SIGNIFICANT", 0) for _, v in check_results.values())
@@ -611,7 +625,7 @@ def _print_summary(check_results):
     return total_c
 
 
-def run_all(path):
+def run_all(path: str) -> int:
     """Orchestrate T1 checks: read → collect → print → summarise → exit code.
 
     Returns 1 if any CRITICAL findings exist, 0 otherwise.

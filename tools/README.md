@@ -60,6 +60,7 @@ python tools/query.py <document.md> subgraph <heading-slug>
 python tools/query.py <document.md> ancestors <X>             # upstream — what reviews are invalidated
 python tools/query.py <document.md> descendants <X>           # downstream — what is affected forward
 python tools/query.py <document.md> subgraph <X-parent-slug>  # sibling set — re-check MECE
+python tools/query.py <document.md> refs --target <X>         # prose blast radius — sections that cite X directly
 ```
 
 Node IDs are not guessable — run `density` to see heading IDs, or `orphans` to surface problem node IDs. Format: `h2:slug` for top-level headings, `def:parent-slug:n` for definition items, `sub:parent-slug:n` for sub-items. All commands accept a partial ID if it matches exactly one node.
@@ -90,6 +91,7 @@ All tool output is plain-text stdout — no parsing required. The decision bound
 | `[Escalated]` finding | Pass condition requires semantic judgment not resolvable from structure alone |
 | `mece` output | Mutual exclusivity and collective exhaustiveness require understanding the argument's domain logic |
 | `cycles` output — cycle detected | Determining whether the cycle is an encoding error or an intentional back-reference requires document-level intent |
+| `shared` output — N ≥ 5 | High-citation shared premises are independence-analysis candidates; whether they constitute a structural vulnerability requires domain judgment |
 
 **Automation-ready sequence for a new document:**
 
@@ -239,7 +241,7 @@ Result values: `[Pass]`, `[Fail]`, `[Escalated]`, `[N/A]`
 
 ## `query.py` — Graph query CLI
 
-Eight deterministic NetworkX queries against a parsed document. All output is plain-text tables — readable by humans and AI callers without further parsing.
+Eight graph queries plus prose cross-reference commands against a parsed document. All output is plain-text tables — readable by humans and AI callers without further parsing.
 
 ```bash
 python tools/query.py <document.md> orphans
@@ -265,9 +267,23 @@ python tools/query.py <document.md> chain
 
 python tools/query.py <document.md> mece
     # Direct children per heading — sibling sets for T2 MECE review
+
+python tools/query.py <document.md> refs
+    # Full prose cross-reference matrix: for each section, all [→ §N] and [→ OQ-EC.N] citations
+
+python tools/query.py <document.md> refs --target <slug>
+    # Inverted lookup: all sections that cite the target matching <slug>, with line numbers
+
+python tools/query.py <document.md> shared
+    # Targets cited from 3+ distinct sections (default) — shared premise / trunk detection
+
+python tools/query.py <document.md> shared --min <N>
+    # Set minimum citation count threshold to N
 ```
 
 `mece` surfaces sibling sets with content_type labels and line references. It does **not** evaluate MECE — that requires a domain-expert human auditor.
+
+`refs --target` gives the prose blast radius for a high-centrality node — complements `ancestors`/`descendants` for items that are logically load-bearing but structurally shallow. `shared` output with N ≥ 5 warrants flagging to a human reviewer — independence analysis requires domain judgment.
 
 ---
 
@@ -298,9 +314,11 @@ Set `DOCUMENT` in the setup cell. Sections:
 | Section Density | Argument/Scope/Claim/Closure/Unknown counts per h2 |
 | Structural Health | Orphans, DAG check, longest reasoning chain |
 | Section Subgraph | Full node tree for a heading (configurable slug) |
-| Delta-Audit Scope | Ancestors + descendants for a changed node |
+| Delta-Audit Scope | Ancestors + descendants for a changed node; `REF_SLUG` adds prose citation lookup alongside structural scope |
 | Load-Bearing Nodes | Top-N non-heading nodes by degree centrality |
 | T2 MECE Scaffolding | Direct children per heading for T2 review |
+| Prose Cross-Reference Index | Full `[→ §N]` / `[→ OQ-EC.N]` citation matrix; set `REF_TARGET` for inverted lookup by item |
+| Shared Premises | Targets cited from `SHARED_MIN`+ distinct sections — trunk detection; N≥5 auto-flagged for human review |
 | pyvis | Interactive HTML render (requires `pip install pyvis`) |
 
 ---

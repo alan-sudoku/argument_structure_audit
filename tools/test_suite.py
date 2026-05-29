@@ -4,7 +4,7 @@
 Covers:
   1. extract_graph  — parse_document, build_graph, node/edge counts, node types
   2. t1_check       — collect_results on a compliant and a non-compliant document
-  3. query          — all 8 commands against the synthetic fixture
+  3. query          — all 10 commands against the synthetic fixture
   4. report         — report.py main() output structure (summary and full mode)
   5. Integration    — full pipeline on synthetic fixture: t1_check → query → report
 
@@ -24,7 +24,6 @@ import tempfile
 import unittest
 from pathlib import Path
 from contextlib import redirect_stdout, redirect_stderr
-from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # sys.path — make tools importable regardless of working directory
@@ -37,13 +36,10 @@ from t1_check import collect_results, run_all
 import networkx as nx
 from query import (
     cmd_orphans, cmd_subgraph, cmd_descendants, cmd_cycles,
-    cmd_density, cmd_mece,
+    cmd_density, cmd_mece, cmd_refs, cmd_shared,
+    cmd_ancestors, cmd_chain,
+    _parse_refs, _split_citation, _resolve_node_id,
 )
-try:
-    from query import cmd_ancestors, cmd_chain
-    _HAS_ANCESTORS = True
-except ImportError:
-    _HAS_ANCESTORS = False
 
 
 # ---------------------------------------------------------------------------
@@ -80,6 +76,31 @@ NON_COMPLIANT_DOC = textwrap.dedent("""\
     - unlabelled item without a type label
 """)
 
+# Fixture document with known prose cross-references for refs/shared tests.
+# Sections A and B each cite §C-item; Section B also cites §D-item.
+# A fenced block contains a citation that must NOT be counted.
+CITATION_DOC = textwrap.dedent("""\
+    ## Section A
+
+    1. **Claim A** The first assertion.
+       - *Argument (basis):* Evidence supports this. *[→ §C-item]* This rules out X.
+
+    ## Section B
+
+    1. **Claim B** The second assertion.
+       - *Argument (basis):* Further evidence. *[→ §C-item, §D-item]* This rules out Y.
+
+    ## Section C
+
+    1. **Claim C** The referenced item.
+       - *Scope (limit):* Applies here only. This qualifies the claim.
+
+    ```python
+    # This citation inside a fenced block must not be counted:
+    # [→ §C-item]
+    ```
+""")
+
 
 def _write_temp(content):
     """Write content to a temp file and return its path as a string."""
@@ -98,6 +119,7 @@ class TestExtractGraph(unittest.TestCase):
 
     def setUp(self):
         self.path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(self.path).unlink, missing_ok=True)
         self.nodes, self.edges = parse_document(self.path)
         self.G = build_graph(self.nodes, self.edges)
 
@@ -158,7 +180,7 @@ class TestExtractGraph(unittest.TestCase):
         self.assertIn("Claim", declared)
 
     def tearDown(self):
-        Path(self.path).unlink(missing_ok=True)
+        pass  # cleanup registered via addCleanup in setUp
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +191,9 @@ class TestT1Check(unittest.TestCase):
 
     def setUp(self):
         self.compliant_path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(self.compliant_path).unlink, missing_ok=True)
         self.non_compliant_path = _write_temp(NON_COMPLIANT_DOC)
+        self.addCleanup(Path(self.non_compliant_path).unlink, missing_ok=True)
 
     def _results(self, path):
         lines = Path(path).read_text(encoding="utf-8").splitlines()
@@ -215,10 +239,6 @@ class TestT1Check(unittest.TestCase):
             code = run_all(self.compliant_path)
         self.assertEqual(code, 0)
 
-    def tearDown(self):
-        Path(self.compliant_path).unlink(missing_ok=True)
-        Path(self.non_compliant_path).unlink(missing_ok=True)
-
 
 # ---------------------------------------------------------------------------
 # 3. query.py command tests
@@ -229,6 +249,7 @@ class TestQueryCommands(unittest.TestCase):
 
     def setUp(self):
         self.path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(self.path).unlink, missing_ok=True)
         nodes, edges = parse_document(self.path)
         self.G = build_graph(nodes, edges)
 
@@ -290,7 +311,6 @@ class TestQueryCommands(unittest.TestCase):
         out = self._capture(cmd_mece, self.G)
         self.assertGreater(len(out.strip()), 0)
 
-    @unittest.skipUnless(_HAS_ANCESTORS, "cmd_ancestors not importable")
     def test_cmd_ancestors_heading_is_root(self):
         h2_nodes = [n for n in self.G.nodes()
                     if self.G.nodes[n].get("type") == "heading"
@@ -298,13 +318,147 @@ class TestQueryCommands(unittest.TestCase):
         out = self._capture(cmd_ancestors, self.G, h2_nodes[0])
         self.assertIn("no ancestors", out)
 
-    @unittest.skipUnless(_HAS_ANCESTORS, "cmd_chain not importable")
     def test_cmd_chain_has_output(self):
         out = self._capture(cmd_chain, self.G)
         self.assertIn("Longest path", out)
 
-    def tearDown(self):
-        Path(self.path).unlink(missing_ok=True)
+
+# ---------------------------------------------------------------------------
+# 3b. query.py — prose cross-reference and helper tests
+# ---------------------------------------------------------------------------
+
+class TestQueryProseCommands(unittest.TestCase):
+
+    def setUp(self):
+        self.path = _write_temp(CITATION_DOC)
+        self.addCleanup(Path(self.path).unlink, missing_ok=True)
+
+    def _capture(self, fn, *args, **kwargs):
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            fn(*args, **kwargs)
+        return buf.getvalue()
+
+    # _split_citation ---------------------------------------------------------
+
+    def test_split_citation_single(self):
+        self.assertEqual(_split_citation("§C-item"), ["§C-item"])
+
+    def test_split_citation_compound(self):
+        result = _split_citation("§C-item, §D-item")
+        self.assertEqual(result, ["§C-item", "§D-item"])
+
+    def test_split_citation_preserves_parens(self):
+        # Commas inside parentheses must not split
+        result = _split_citation("§2 Argument (a, b), OQ-EC.4")
+        self.assertEqual(result, ["§2 Argument (a, b)", "OQ-EC.4"])
+
+    def test_split_citation_empty(self):
+        self.assertEqual(_split_citation(""), [])
+
+    def test_split_citation_whitespace_stripped(self):
+        result = _split_citation("  §C-item ,  §D-item  ")
+        self.assertEqual(result, ["§C-item", "§D-item"])
+
+    # _parse_refs -------------------------------------------------------------
+
+    def test_parse_refs_finds_citations(self):
+        inverted = _parse_refs(self.path)
+        self.assertGreater(len(inverted), 0)
+
+    def test_parse_refs_excludes_fenced_block(self):
+        # The citation inside the ```python block must not appear
+        inverted = _parse_refs(self.path)
+        # Fenced block contains [→ §C-item] on its own line; if excluded
+        # correctly, §C-item appears only via the prose lines, not three times.
+        # Count total occurrences across all (target, section) pairs.
+        total = sum(len(locs) for key, locs in inverted.items() if "§C-item" in key)
+        # Section A line and Section B compound line = 2 occurrences max
+        self.assertLessEqual(total, 2)
+
+    def test_parse_refs_section_tracking(self):
+        inverted = _parse_refs(self.path)
+        # §C-item is cited from both Section A and Section B
+        sections = set()
+        for key, locs in inverted.items():
+            if "§C-item" in key:
+                for _, section in locs:
+                    sections.add(section)
+        self.assertGreaterEqual(len(sections), 2)
+
+    def test_parse_refs_missing_file_exits(self):
+        with self.assertRaises(SystemExit):
+            _parse_refs("/nonexistent/path/document.md")
+
+    # _resolve_node_id --------------------------------------------------------
+
+    def test_resolve_node_id_exact_match(self):
+        path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(path).unlink, missing_ok=True)
+        nodes, edges = parse_document(path)
+        G = build_graph(nodes, edges)
+        h2 = [n for n in G.nodes() if G.nodes[n].get("type") == "heading"
+              and G.nodes[n].get("level") == 2][0]
+        self.assertEqual(_resolve_node_id(G, h2), h2)
+
+    def test_resolve_node_id_not_found_exits(self):
+        path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(path).unlink, missing_ok=True)
+        nodes, edges = parse_document(path)
+        G = build_graph(nodes, edges)
+        with self.assertRaises(SystemExit):
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                _resolve_node_id(G, "zzz_no_such_node_zzz")
+
+    def test_resolve_node_id_ambiguous_exits(self):
+        path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(path).unlink, missing_ok=True)
+        nodes, edges = parse_document(path)
+        G = build_graph(nodes, edges)
+        # "h2:" matches every h2 heading node — guaranteed ambiguous
+        with self.assertRaises(SystemExit):
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                _resolve_node_id(G, "h2:")
+
+    # cmd_refs ----------------------------------------------------------------
+
+    def test_cmd_refs_full_matrix_has_output(self):
+        out = self._capture(cmd_refs, self.path)
+        self.assertIn("citation", out)
+
+    def test_cmd_refs_target_finds_match(self):
+        out = self._capture(cmd_refs, self.path, "§C-item")
+        self.assertIn("§C-item", out)
+
+    def test_cmd_refs_target_no_match_exits(self):
+        with self.assertRaises(SystemExit):
+            buf = io.StringIO()
+            with redirect_stderr(buf):
+                cmd_refs(self.path, "zzz_no_such_target_zzz")
+
+    def test_cmd_refs_no_citations_doc(self):
+        path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(path).unlink, missing_ok=True)
+        out = self._capture(cmd_refs, path)
+        self.assertIn("No prose cross-references", out)
+
+    # cmd_shared --------------------------------------------------------------
+
+    def test_cmd_shared_finds_shared_premise(self):
+        # §C-item is cited from Section A and Section B — shared at min=2
+        out = self._capture(cmd_shared, self.path, 2)
+        self.assertIn("§C-item", out)
+
+    def test_cmd_shared_default_threshold_no_result(self):
+        # Only 2 sections in CITATION_DOC — nothing meets min=3
+        out = self._capture(cmd_shared, self.path, 3)
+        self.assertIn("No shared premises", out)
+
+    def test_cmd_shared_invalid_min_raises(self):
+        with self.assertRaises(ValueError):
+            cmd_shared(self.path, 0)
 
 
 # ---------------------------------------------------------------------------
@@ -315,14 +469,13 @@ class TestReport(unittest.TestCase):
 
     def setUp(self):
         self.path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(self.path).unlink, missing_ok=True)
 
     def _run_report(self, extra_args=None):
-        """Import and call report.main() with patched sys.argv."""
         import report
-        argv = ["report.py", self.path] + (extra_args or [])
         buf = io.StringIO()
-        with patch("sys.argv", argv), redirect_stdout(buf):
-            report.main()
+        with redirect_stdout(buf):
+            report.main([self.path] + (extra_args or []))
         return buf.getvalue()
 
     def test_report_has_header(self):
@@ -353,9 +506,6 @@ class TestReport(unittest.TestCase):
         out = self._run_report()
         self.assertIn("Nodes:", out)
 
-    def tearDown(self):
-        Path(self.path).unlink(missing_ok=True)
-
 
 # ---------------------------------------------------------------------------
 # 5. Integration — full pipeline on synthetic fixture
@@ -366,6 +516,7 @@ class TestIntegration(unittest.TestCase):
 
     def setUp(self):
         self.path = _write_temp(COMPLIANT_DOC)
+        self.addCleanup(Path(self.path).unlink, missing_ok=True)
         self.nodes, self.edges = parse_document(self.path)
         self.G = build_graph(self.nodes, self.edges)
         lines = Path(self.path).read_text(encoding="utf-8").splitlines()
@@ -404,12 +555,9 @@ class TestIntegration(unittest.TestCase):
     def test_report_runs_without_error(self):
         import report
         buf = io.StringIO()
-        with patch("sys.argv", ["report.py", self.path]), redirect_stdout(buf):
-            report.main()
+        with redirect_stdout(buf):
+            report.main([self.path])
         self.assertIn("# Argument Structure Audit Report", buf.getvalue())
-
-    def tearDown(self):
-        Path(self.path).unlink(missing_ok=True)
 
 
 # ---------------------------------------------------------------------------
