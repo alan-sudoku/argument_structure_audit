@@ -1,0 +1,250 @@
+#!/usr/bin/env python3
+"""Hollow-word pre-audit for argument documents.
+
+Scans a document for words and phrases that weaken arguments by substituting
+vague signal for concrete claim. Each hit identifies the word, the implied
+question it leaves unanswered, and the line — so a practitioner can triage
+before formal audit.
+
+Rationale: hollow words are an argument-level defect, not just a style issue.
+A claim built on "robust," "foundational," or "seamless" cannot be falsified
+because no concrete property is asserted. The auditor cannot evaluate what the
+author hasn't stated.
+
+Exit code 0 for clean runs and runs with findings; 1 only on system errors (file not found, decode error).
+
+Usage:
+    python tools/hollow_words.py <document.md>
+    python tools/hollow_words.py <document.md> --counts   # summary only
+"""
+
+import argparse
+import re
+import sys
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterator
+
+
+# ---------------------------------------------------------------------------
+# Word list
+# Each entry: word/phrase (lowercase) → implied question the author must answer
+# ---------------------------------------------------------------------------
+
+HOLLOW: dict[str, str] = {
+    # Drama verbs — AI prefers them over plain verbs
+    "delve":                    "what specifically are you examining?",
+    "foster":                   "what mechanism produces this outcome?",
+    "leverage":                 "use — say 'use'",
+    "utilize":                  "use — say 'use'",
+    "underscore":               "say 'shows' or 'demonstrates'",
+    "unleash":                  "what specifically becomes available?",
+    "unlock":                   "what specifically becomes available?",
+    "elevate":                  "what improves, and by what measure?",
+    "supercharge":              "what improves, and by what measure?",
+    "testament":                "state the evidence directly",
+    "revolutionize":            "what specific mechanism changes, and how does it replace the existing standard?",
+    "disrupt":                  "which established method is displaced, and by what mechanism?",
+    "empower":                  "what action can the entity now perform that was previously impossible?",
+    "demystify":                "what specific mechanism or concept are you explaining?",
+    "streamline":               "what steps are removed, and what is the reduction in effort?",
+    "optimize":                 "what is the baseline metric, the new metric, and the objective function?",
+
+    # Importance assertions — assert that something matters without showing consequences
+    "crucial":                  "what fails if this is omitted or incorrect?",
+    "vital":                    "what fails if this is omitted or incorrect?",
+    "paramount":                "paramount compared to what competing priorities?",
+    "key":                      "which specific attribute makes this primary?",
+
+    # Vague quantifiers — borrow precision connotation without providing data
+    "significantly":            "by how much? provide a threshold or quantitative bound",
+    "substantially":            "by what measure or percentage?",
+    "vastly":                   "by what order of magnitude?",
+    "virtually":                "almost, or completely? state the actual rate or exception class",
+
+    # Adjective inflation — sounds precise, asserts nothing
+    "seamless":                 "seamless under which conditions, for which user?",
+    "robust":                   "invariant under which perturbations?",
+    "cutting-edge":             "which specific advance over what prior state?",
+    "state-of-the-art":         "which specific advance over what prior state?",
+    "transformative":           "what changes, in what direction, by how much?",
+    "groundbreaking":           "what prior assumption does this break?",
+    "dynamic":                  "varying on which dimension, over which range?",
+
+    # Structural vocabulary — earns its place only if structure is named
+    "structural":               "which arrangement? what would a different one look like?",
+    "systematic":               "which system? what are its components?",
+    "holistic":                 "as opposed to what decomposition?",
+    "foundational":             "what rests on it?",
+    "fundamental":              "fundamental to what? what depends on it?",
+    "load-bearing":             "what does it support? what fails if removed?",
+    "nuanced":                  "simpler than what view?",
+
+    # Epistemic weasels — weaken the claim they attach to
+    "essentially":              "stripped of what? state the precise claim",
+    "effectively":              "same as, or approximately same as? say which",
+    "arguably":                 "argued by whom, with what support?",
+    "in many ways":             "name the ways",
+
+    # Abstract metaphors — say the actual thing
+    "tapestry":                 "say the actual structure or set",
+    "beacon":                   "say the actual property",
+    "landscape":                "say the actual space, domain, or set",
+    "realm":                    "say 'domain' or name the field",
+    "plethora":                 "say 'many'",
+    "myriad":                   "say 'many'",
+    "synergy":                  "name the specific interaction",
+    "paradigm shift":           "what assumption changes, and to what?",
+
+    # Corporate filler
+    "at its core":              "filler — state the claim directly",
+    "in essence":               "filler — state the claim directly",
+    "it is important to note":  "filler — make the point directly",
+    "in conclusion":            "filler — omit or make the final claim directly",
+    "ultimately":               "filler — make the claim without the preamble",
+    "not only":                 "filler construction — often padded — trim",
+    "in order to":              "filler — say 'to'",
+}
+
+# Single combined regex sorted longest-first so phrases match before their component words
+_COMBINED_RE = re.compile(
+    r"\b(" + "|".join(re.escape(w) for w in sorted(HOLLOW, key=len, reverse=True)) + r")\b",
+    re.IGNORECASE,
+)
+
+
+# ---------------------------------------------------------------------------
+# Shared utilities
+# ---------------------------------------------------------------------------
+
+FENCE_RE = re.compile(r"^(`{3,}|~{3,})")
+
+
+def _iter_prose(lines: list[str]) -> Iterator[tuple[int, str]]:
+    """Yield (1-based lineno, line) outside fenced code/mermaid blocks."""
+    in_fence = False
+    fence_marker = ""
+    for i, line in enumerate(lines, 1):
+        stripped = line.strip()
+        m = FENCE_RE.match(stripped)
+        if not in_fence and m:
+            in_fence = True
+            fence_marker = m.group(1)
+            continue
+        if in_fence:
+            if stripped.startswith(fence_marker):
+                in_fence = False
+            continue
+        yield i, line
+
+
+def _clean(line: str) -> str:
+    """Strip inline math and code spans — avoid false positives inside formulas."""
+    line = re.sub(r"\$[^$]+\$", " ", line)
+    line = re.sub(r"`[^`]+`",   " ", line)
+    return line
+
+
+# ---------------------------------------------------------------------------
+# Finding
+# ---------------------------------------------------------------------------
+
+@dataclass
+class Finding:
+    lineno: int
+    word:   str
+    hint:   str
+    text:   str   # stripped source line for context
+
+    def __lt__(self, other):
+        return self.lineno < other.lineno
+
+
+# ---------------------------------------------------------------------------
+# Scanner
+# ---------------------------------------------------------------------------
+
+def scan(path: Path) -> list[Finding]:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    findings: list[Finding] = []
+
+    for lineno, line in _iter_prose(lines):
+        check = _clean(line)
+        source = line.strip()
+
+        for m in _COMBINED_RE.finditer(check):
+            word = m.group(0).lower()
+            findings.append(Finding(lineno, word, HOLLOW[word], source))
+
+    return sorted(findings)
+
+
+# ---------------------------------------------------------------------------
+# Output
+# ---------------------------------------------------------------------------
+
+def _print_findings(findings: list[Finding], path: Path, counts_only: bool) -> None:
+    if not findings:
+        print(f"{path}: no hollow words found.")
+        return
+
+    by_word: dict[str, list[Finding]] = defaultdict(list)
+    for f in findings:
+        by_word[f.word].append(f)
+
+    if counts_only:
+        print(f"\n{path} — {len(findings)} finding(s) across {len(by_word)} word(s)\n")
+        for word in sorted(by_word, key=lambda w: -len(by_word[w])):
+            hits = by_word[word]
+            lines = ", ".join(str(f.lineno) for f in hits)
+            print(f"  {word!r:30s}  ×{len(hits)}  (lines {lines})")
+            print(f"  {'':30s}  → {hits[0].hint}")
+        return
+
+    print(f"\n{path} — {len(findings)} finding(s)\n")
+    for f in sorted(findings):
+        print(f"  line {f.lineno:4d}  '{f.word}'")
+        print(f"         → {f.hint}")
+        # Show context with the word highlighted in brackets
+        highlighted = re.sub(
+            r"\b" + re.escape(f.word) + r"\b",
+            lambda m: f"[{m.group()}]",
+            f.text,
+            flags=re.IGNORECASE,
+        )
+        print(f"         {highlighted}")
+        print()
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Hollow-word pre-audit for argument documents.",
+    )
+    parser.add_argument("document", type=Path, help="Path to the Markdown document")
+    parser.add_argument(
+        "--counts", action="store_true",
+        help="Summary mode: show word frequencies and line numbers, not full context",
+    )
+    args = parser.parse_args()
+
+    if not args.document.exists():
+        print(f"File not found: {args.document}", file=sys.stderr)
+        return 1
+
+    try:
+        findings = scan(args.document)
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"Error reading {args.document}: {e}", file=sys.stderr)
+        return 1
+
+    _print_findings(findings, args.document, args.counts)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

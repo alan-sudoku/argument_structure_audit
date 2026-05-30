@@ -1,6 +1,6 @@
 # Argument Structure Audit — Tools
 
-Five standalone Python scripts and an interactive notebook for machine-assisted audit of structured argument documents.
+Five standalone Python scripts, a hollow-word pre-audit tool, and an interactive notebook for machine-assisted audit of structured argument documents.
 
 ---
 
@@ -35,6 +35,9 @@ brew install graphviz     # macOS
 **For a new document:**
 
 ```bash
+# 0. Pre-audit — scan for hollow words before structural audit
+python tools/hollow_words.py <document.md> --counts
+
 # 1. Structural gate — catch encoding violations before graphing
 python tools/t1_check.py <document.md>
 
@@ -96,7 +99,7 @@ All tool output is plain-text stdout — no parsing required. The decision bound
 **Automation-ready sequence for a new document:**
 
 ```
-t1_check → density → orphans → cycles → report
+hollow_words --counts → t1_check → density → orphans → cycles → report
 ```
 
 Run in that order. Stop and report to the human if any `[Fail]` finding cannot be resolved mechanically, if orphans are found, or if a cycle is detected. Do not proceed to `report` until the structural gate (`t1_check`) is clean or findings are explicitly deferred by the human.
@@ -160,6 +163,41 @@ Report: confirm the file was written. State total node and edge count from the h
 2. **Scope** — full new-document audit (use the prompt above as-is), or delta-audit after changing a specific node (replace Steps 2–5 with `ancestors <node-id>`, `descendants <node-id>`, `subgraph <parent-slug>`)?
 3. **Repairs** — do you want the AI to attempt mechanical repairs for `[Fail]` findings in a second pass, or report only?
 4. **Report format** — summary mode (default) or `--full` for per-finding detail?
+
+---
+
+## `hollow_words.py` — Hollow-word pre-audit
+
+Scans a document for words and phrases that weaken arguments by substituting vague signal for concrete claim. A claim built on "robust," "foundational," or "seamless" cannot be falsified — no concrete property is asserted, so the auditor cannot evaluate what the author hasn't stated.
+
+Run before T1 to surface argument-level weaknesses that structural checks cannot catch.
+
+**Usage**
+
+```bash
+python tools/hollow_words.py <document.md>              # full mode: each hit with context line
+python tools/hollow_words.py <document.md> --counts     # summary: word frequencies and line numbers
+```
+
+**Output (full mode)**
+
+Each finding shows: line number, the hollow word, the implied question it leaves unanswered, and the source line with the word bracketed.
+
+**Output (--counts)**
+
+Word frequencies sorted by hit count, with all line numbers and the implied question. Use this to prioritise: a word appearing 10× in a section signals a pattern, not an incident.
+
+**Word list rationale**
+
+| Category | Examples | Defect |
+| :--- | :--- | :--- |
+| Drama verbs | delve, leverage, foster | replace plain verbs with vague motion; say what you mean |
+| Adjective inflation | robust, seamless, foundational | assert a property without naming it; auditor cannot evaluate |
+| Epistemic weasels | essentially, effectively, arguably | weaken claim scope without justification |
+| Abstract metaphors | landscape, realm, tapestry | substitute metaphor for named set or domain |
+| Corporate filler | at its core, in conclusion | pad without adding content |
+
+No third-party dependencies. Exit 0 always — review aid, not a gate.
 
 ---
 
