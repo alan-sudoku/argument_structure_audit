@@ -163,6 +163,23 @@ HOLLOW: dict[str, str] = {
     "it is widely accepted":    "accepted where, by whom, within what scope?",
     "consensus holds":          "which community? what is the evidence base for the consensus?",
     "it is generally understood": "understood by whom? state the claim as your own or cite the source",
+    "everyone knows":           "appeal to popularity — provide the rate or citation; do not assume universal agreement",
+    "common sense":             "bypasses analysis — state the underlying logical or physical principle directly",
+
+    # Overconfidence markers — shut down legitimate debate by asserting
+    # a claim is beyond challenge; same failure mode as 'definitively'
+    "indisputable":             "if indisputable, state the proof — otherwise name and address the valid counterarguments",
+    "undeniable":               "same as 'indisputable' — state the proof or address the counterarguments",
+
+    # False dilemma markers — assert only two options exist without
+    # eliminating the alternatives
+    "only alternative":         "false dilemma — what other options were analysed? show why they were excluded",
+    "sole solution":            "false dilemma — what other options were analysed? show why they were excluded",
+    "inevitably":               "what causal chain guarantees this outcome? state the steps — distinguish logical from empirical necessity",
+    "paves the way for":        "slippery slope — what specific mechanism links this action to the stated outcome?",
+
+    # Appeals to intuition — assert correctness by feel rather than argument
+    "intuitive":                "intuitive to whom? ground the claim in evidence, cognitive load data, or established standards",
 }
 
 # Single combined regex sorted longest-first so phrases match before their component words

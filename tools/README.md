@@ -207,6 +207,9 @@ Word frequencies sorted by hit count, with all line numbers and the implied ques
 | Unanchored evidence | empirically, experimentally, studies show | assert observational support — verify the observation exists and supports the strength of the claim |
 | False self-evidence | obviously, clearly, trivially | assert a step needs no explanation — often where the actual argument gap is hidden |
 | Authority smuggling | experts agree, it is widely accepted | invoke consensus without a source — cite it or restate as your own claim |
+| Overconfidence | indisputable, undeniable | assert a claim is beyond challenge — state the proof or address counterarguments |
+| False dilemma | only alternative, inevitably | assert only two options or a guaranteed outcome — name and eliminate the alternatives |
+| Appeals to intuition | intuitive | assert correctness by feel — ground in evidence or established standards |
 
 No third-party dependencies. Exit 0 always — review aid, not a gate.
 
