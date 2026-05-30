@@ -8,6 +8,7 @@
 
 ## Execution Protocol
 
+0. **Node enumeration (pre-T1):** Before binding §0 parameters, run `python tools/structure_depth.py <document> --annotate --section <target>`. Any line with `has_inline: true` and `inline_count >= 2` contains hidden sub-items — split those items into separate structural nodes before applying T1. T1 applied to an unsplit inline item audits one node when two or more exist; the audit will appear complete but will not be.
 1. Bind §0 parameters before any check. All `[value — from §0]` references resolve here.
 2. Check the scope-out table. If the document class matches, suspend the listed checks before starting.
 3. Apply checks in this order: `RC1` → `CONTENT-TYPE` → `CLAIM-FIRST` → `CONSEQUENCE` → `TYPE-LABEL` → `RC2` → `RC3`.

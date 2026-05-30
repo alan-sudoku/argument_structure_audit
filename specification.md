@@ -144,6 +144,15 @@ Progressive disclosure requires each level to be independently intelligible — 
 
 **Failure condition:** if a blank AI must read L2 in full to discover that L3 exists, L3 is invisible. Each level must be reachable from the level above without entering the level below.
 
+*Scope (default visual encoding at L3/L4):*
+
+| Level | Default encoding | Reason |
+| :--- | :--- | :--- |
+| **L3** | `1.` numbered list | Items are countable and cross-referenceable by number (e.g. `SQ3`, `Requirement (b)`) |
+| **L4** | `  - ` indented bullet with prose label | Parallel set members; label inside bullet if naming needed; skippable from label alone |
+
+§0 may override this default for document classes where numbered items are steps or decisions rather than cross-referenceable claims.
+
 ---
 
 ## §3 — Content-Type Taxonomy
