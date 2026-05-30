@@ -196,6 +196,10 @@ Word frequencies sorted by hit count, with all line numbers and the implied ques
 | Epistemic weasels | essentially, effectively, arguably | weaken claim scope without justification |
 | Abstract metaphors | landscape, realm, tapestry | substitute metaphor for named set or domain |
 | Corporate filler | at its core, in conclusion | pad without adding content |
+| Conclusion markers | therefore, thus, necessarily | assert deductive entailment — verify the premises actually close the gap |
+| Premise markers | grounded in, well-established, by definition | assert a claim is already established — verify the source exists and is used consistently |
+| Terminology smuggling | mathematically, formally, provably | borrow a field's formal authority — verify the specific result applies without extra assumptions |
+| Unanchored evidence | empirically, experimentally, studies show | assert observational support — verify the observation exists and supports the strength of the claim |
 
 No third-party dependencies. Exit 0 always — review aid, not a gate.
 

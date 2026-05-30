@@ -105,6 +105,49 @@ HOLLOW: dict[str, str] = {
     "ultimately":               "filler — make the claim without the preamble",
     "not only":                 "filler construction — often padded — trim",
     "in order to":              "filler — say 'to'",
+
+    # -----------------------------------------------------------------------
+    # Argument integrity markers — the word isn't hollow but makes an implicit
+    # claim about epistemic status the argument may not satisfy. Three types:
+    #
+    #   Conclusion markers  — assert deductive entailment; verify the premises
+    #                         actually close the gap
+    #   Premise markers     — assert a claim is already established; verify
+    #                         the source exists and is used consistently
+    #   Terminology smuggling — borrow a field's formal authority; verify the
+    #                         specific result applies without extra assumptions
+    # -----------------------------------------------------------------------
+
+    # Conclusion markers
+    "therefore":                "asserts entailment — do the premises actually force this, or is the step inductive?",
+    "thus":                     "asserts entailment — same question as 'therefore'",
+    "definitively":             "what closes off the alternatives? name the proof or exhaustive case analysis",
+    "conclusively":             "what excludes competing explanations?",
+    "necessarily":              "logically necessary, or empirically contingent? state which",
+    "it follows that":          "does it follow deductively, or by analogy or induction?",
+
+    # Premise markers
+    "grounded in":              "which specific result? confirm it is used consistently here",
+    "well-established":         "established where, by whom, within what scope?",
+    "by definition":            "whose definition? where stated? is it applied consistently?",
+    "it is known that":         "known to whom? in which literature? within what scope?",
+
+    # Terminology smuggling
+    "mathematically":           "which result or theorem? state it — does it apply here without additional assumptions?",
+    "formally":                 "in which formal system? state the definition or rule being applied",
+    "provably":                 "by which proof? or is this a conjecture stated as established?",
+    "information-theoretically": "which result (DPI, Shannon, rate-distortion)? does it apply directly or by analogy?",
+    "thermodynamically":        "which law or theorem? state it",
+
+    # Unanchored evidence claims — assert observational support without naming it;
+    # distinct from terminology smuggling (misapplied formalism) — here the
+    # evidence may not exist or may not support the strength of the claim
+    "empirically":              "which observation? controlled under what conditions? what scope?",
+    "observationally":          "which observation? is it systematic or anecdotal?",
+    "experimentally":           "which experiment? what controls? what was measured?",
+    "studies show":             "which studies? what population? what effect size?",
+    "research suggests":        "which research? peer-reviewed? in what domain?",
+    "evidence suggests":        "which evidence? direct observation or inference?",
 }
 
 # Single combined regex sorted longest-first so phrases match before their component words
