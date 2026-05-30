@@ -99,10 +99,15 @@ All tool output is plain-text stdout — no parsing required. The decision bound
 **Automation-ready sequence for a new document:**
 
 ```
-hollow_words --counts → t1_check → density → orphans → cycles → report
+Stage 1 — human, no LLM cost
+hollow_words --counts   (fix argument signal failures before anything else)
+t1_check                (fix structural encoding violations)
+
+Stage 2 — LLM audit
+density → orphans → cycles → report → t1_strip
 ```
 
-Run in that order. Stop and report to the human if any `[Fail]` finding cannot be resolved mechanically, if orphans are found, or if a cycle is detected. Do not proceed to `report` until the structural gate (`t1_check`) is clean or findings are explicitly deferred by the human.
+Run Stage 1 first and resolve findings before handing to the LLM. The LLM audit surface shrinks with each hollow-word and T1 fix — a cluster of `therefore`/`formally` hits in one section is a strong prior that LOGIC-TYPE or LOAD-TEST will fire there. Stop and report to the human if any `[Fail]` finding cannot be resolved mechanically, if orphans are found, or if a cycle is detected.
 
 ---
 
@@ -170,7 +175,7 @@ Report: confirm the file was written. State total node and edge count from the h
 
 Scans a document for words and phrases that weaken arguments by substituting vague signal for concrete claim. A claim built on "robust," "foundational," or "seamless" cannot be falsified — no concrete property is asserted, so the auditor cannot evaluate what the author hasn't stated.
 
-Run before T1 to surface argument-level weaknesses that structural checks cannot catch.
+Run before T1 and before any LLM audit. `hollow_words` is O(n) regex with zero LLM cost — it surfaces argument signal failures a human should fix before the LLM reads the document. LLM auditors are not reliable hollow-word detectors: correlated training data means a model may accept "this is grounded in information theory" without checking whether the cited result actually applies. The regex has no such blind spot. A cluster of conclusion markers (`therefore`, `necessarily`) or terminology smuggling (`formally`, `mathematically`) in one section is also a strong prior that LOGIC-TYPE or LOAD-TEST will fire there — fixing hollow words first narrows the LLM's audit surface.
 
 **Usage**
 
