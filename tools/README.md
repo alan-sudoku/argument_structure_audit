@@ -1,6 +1,6 @@
 # Argument Structure Audit — Tools
 
-Five standalone Python scripts, a hollow-word pre-audit tool, and an interactive notebook for machine-assisted audit of structured argument documents.
+Six standalone Python scripts, a hollow-word pre-audit tool, and an interactive notebook for machine-assisted audit of structured argument documents.
 
 ---
 
@@ -35,7 +35,13 @@ brew install graphviz     # macOS
 **For a new document:**
 
 ```bash
-# 0. Pre-audit — scan for hollow words before structural audit
+# 0. Node enumeration — split inline items before T1 or graph extraction
+python tools/structure_depth.py <document.md> --annotate --section <target>
+# Any line with has_inline=true and inline_count>=2 must be split into
+# separate structural items before continuing. T1 applied to an unsplit
+# inline item audits one node when two or more exist.
+
+# 1. Pre-audit — scan for hollow words before structural audit
 python tools/hollow_words.py <document.md> --counts
 
 # 1. Structural gate — catch encoding violations before graphing
@@ -168,6 +174,52 @@ Report: confirm the file was written. State total node and edge count from the h
 2. **Scope** — full new-document audit (use the prompt above as-is), or delta-audit after changing a specific node (replace Steps 2–5 with `ancestors <node-id>`, `descendants <node-id>`, `subgraph <parent-slug>`)?
 3. **Repairs** — do you want the AI to attempt mechanical repairs for `[Fail]` findings in a second pass, or report only?
 4. **Report format** — summary mode (default) or `--full` for per-finding detail?
+
+---
+
+## `structure_depth.py` — Inline structure detector (pre-T1 node enumeration)
+
+Scans a Markdown argument document for hidden structural depth — inline `(a)/(b)` or `(i)/(ii)` tokens embedded in prose that make sub-items invisible to `extract_graph.py` and T1. Run before T1 and before graph extraction; any `has_inline: true, inline_count >= 2` item must be split into separate structural nodes first.
+
+No third-party dependencies. Exit 0 always — diagnostic, not a gate.
+
+**Usage**
+
+```bash
+# Summary mode — depth levels and encoding methods present
+python tools/structure_depth.py <document.md>
+python tools/structure_depth.py <document.md> --section "8"
+python tools/structure_depth.py <document.md> --lines 620 660
+
+# Annotation mode — one JSON record per structural line, for AI parser consumption
+python tools/structure_depth.py <document.md> --annotate
+python tools/structure_depth.py <document.md> --annotate --section "8"
+```
+
+**Annotation mode output fields**
+
+| Field | Description |
+| :--- | :--- |
+| `lineno` | 1-indexed source line number |
+| `section` | Nearest OQ or heading label |
+| `depth` | Nesting level (0 = directly under heading) |
+| `encoding` | `heading` / `bullet` / `numbered` / `prose` |
+| `has_inline` | `true` if inline tokens detected in body text |
+| `inline_scheme` | `roman` / `abc` / `upper` / `mixed` / `null` |
+| `inline_count` | Number of inline tokens found (= hidden sub-items) |
+| `label` | Explicit item label if present, else `null` |
+| `action` | One-line instruction for a blank AI parser |
+
+**Action values**
+
+- `inline_count >= 2`: `"DO NOT treat as single item. Scan for {scheme} tokens; split into {count} sub-item(s) at depth {depth+1}."`
+- `inline_count == 1`: `"Single inline token detected — likely parenthetical, not a list. Verify before splitting."`
+- `numbered`: `"Index as cross-referenceable item {n} within current section."`
+- `bullet depth > 0`: `"Attach to nearest depth-0 parent above; subordinate, not standalone."`
+- `prose`: `"Read for context; do not extract as argument node."`
+- `heading`: `"Section boundary; update section context."`
+
+**Scope assumptions** (see docstring for full list): hyphen-only bullets; 2-space indent; `$...$` math stripped before inline detection; table rows skipped; single-asterisk italic labels only.
 
 ---
 
