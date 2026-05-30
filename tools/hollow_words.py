@@ -148,6 +148,21 @@ HOLLOW: dict[str, str] = {
     "studies show":             "which studies? what population? what effect size?",
     "research suggests":        "which research? peer-reviewed? in what domain?",
     "evidence suggests":        "which evidence? direct observation or inference?",
+
+    # False self-evidence markers — assert a step needs no explanation; often
+    # where the actual argument gap is hidden
+    "obviously":                "obvious to whom? state the reasoning step explicitly",
+    "clearly":                  "clearly to whom? state the reasoning step explicitly",
+    "trivially":                "trivial by which formal argument? state it",
+    "of course":                "state the reasoning — 'of course' skips the gap",
+    "it is clear that":         "state the reasoning — if it were clear, it would not need asserting",
+
+    # Authority smuggling — invoke consensus without a source; weaker than
+    # 'studies show' because no source is even implied
+    "experts agree":            "which experts? in which field? cite the source or restate as your own claim",
+    "it is widely accepted":    "accepted where, by whom, within what scope?",
+    "consensus holds":          "which community? what is the evidence base for the consensus?",
+    "it is generally understood": "understood by whom? state the claim as your own or cite the source",
 }
 
 # Single combined regex sorted longest-first so phrases match before their component words
