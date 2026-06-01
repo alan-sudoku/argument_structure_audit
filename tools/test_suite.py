@@ -239,6 +239,21 @@ class TestT1Check(unittest.TestCase):
             code = run_all(self.compliant_path)
         self.assertEqual(code, 0)
 
+    def test_run_all_verbose_emits_escalated_items(self):
+        # NON_COMPLIANT_DOC has no sub-items with multi-sentence consequence,
+        # so use COMPLIANT_DOC which has Escalated CONSEQUENCE items.
+        buf = io.StringIO()
+        with redirect_stdout(buf):
+            run_all(self.compliant_path, verbose=True)
+        out = buf.getvalue()
+        # With --verbose, escalated CONSEQUENCE or CLAIM-FIRST lines include
+        # a line number (digit) followed by a bracketed note excerpt.
+        import re
+        self.assertTrue(
+            re.search(r"\d+\s+\[", out),
+            "Expected verbose item lines (lineno + note) in output"
+        )
+
 
 # ---------------------------------------------------------------------------
 # 3. query.py command tests

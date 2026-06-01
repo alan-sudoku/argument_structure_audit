@@ -575,7 +575,13 @@ def collect_results(lines: list[str], rel: str) -> dict[str, tuple[list[Finding]
     return check_results
 
 
-def _print_check_block(name: str, findings: list[Finding], counts: dict[str, int]) -> None:
+def _print_check_block(
+    name: str,
+    findings: list[Finding],
+    counts: dict[str, int],
+    lines: list[str] | None = None,
+    verbose: bool = False,
+) -> None:
     """Print the per-check status block to stdout."""
     fails     = [f for f in findings if f.result == "Fail"]
     escalated = [f for f in findings if f.result == "Escalated"]
@@ -594,6 +600,12 @@ def _print_check_block(name: str, findings: list[Finding], counts: dict[str, int
         _print_findings(fails)
     elif escalated:
         print(f"       Escalated={len(escalated)} (T2 review required)")
+        if verbose and lines:
+            for f in sorted(escalated, key=lambda x: x.line):
+                raw = lines[f.line - 1].rstrip() if f.line <= len(lines) else ""
+                slug_m = re.match(r"^[\s-]*(\*[^:]+\*):?", raw)
+                slug = slug_m.group(1) if slug_m else raw.strip()[:70]
+                print(f"    {f.line:4d}  [{f.note[:40]}]  {slug[:70]}")
     print()
 
 
@@ -625,7 +637,7 @@ def _print_summary(check_results: dict[str, tuple[list[Finding], dict[str, int]]
     return total_c
 
 
-def run_all(path: str) -> int:
+def run_all(path: str, verbose: bool = False) -> int:
     """Orchestrate T1 checks: read → collect → print → summarise → exit code.
 
     Returns 1 if any CRITICAL findings exist, 0 otherwise.
@@ -642,7 +654,7 @@ def run_all(path: str) -> int:
     check_results = collect_results(lines, rel)
 
     for name, (findings, counts) in check_results.items():
-        _print_check_block(name, findings, counts)
+        _print_check_block(name, findings, counts, lines=lines, verbose=verbose)
 
     total_c = _print_summary(check_results)
 
@@ -662,8 +674,12 @@ def main():
         description="Run T1 structural checks on an argument document."
     )
     parser.add_argument("document", help="Path to the Markdown document")
+    parser.add_argument(
+        "--verbose", action="store_true",
+        help="Print line number and slug for each escalated item",
+    )
     args = parser.parse_args()
-    sys.exit(run_all(args.document))
+    sys.exit(run_all(args.document, verbose=args.verbose))
 
 
 if __name__ == "__main__":

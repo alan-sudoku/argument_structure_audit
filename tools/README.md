@@ -177,6 +177,22 @@ Report: confirm the file was written. State total node and edge count from the h
 
 ---
 
+## Interpreting tool output — `sample_usage.md`
+
+Tool output requires a triage step before acting. Raw findings conflate structural defects, false positives, and by-design patterns that look identical at the output layer. [`sample_usage.md`](sample_usage.md) documents five interpretation patterns encountered in practice:
+
+| Pattern | Risk if skipped |
+| :--- | :--- |
+| `hollow_words` high hit count on domain vocabulary | Over-repair — replacing legitimate domain terms |
+| `CONSEQUENCE` escalation count vs. actionable split | Oversized T2 workload — single-sentence legend/notation items are expected false positives |
+| `mece` all-Scope sibling set — two distinct diagnoses | Wrong repair — TYPE-LABEL mismatch and genuinely missing Argument look identical; repairs differ |
+| `shared` N≥5 — OQ nodes vs. trunk nodes | Unnecessary independence analysis — OQ nodes at high N are by design |
+| `refs` unresolved targets — external dependency vs. stale label | Missed stale reference — external deps and stale labels require different resolutions |
+
+Each entry in `sample_usage.md` gives: what the tool reports, the false-positive risk, and a triage rule.
+
+---
+
 ## `structure_depth.py` — Inline structure detector (pre-T1 node enumeration)
 
 Scans a Markdown argument document for hidden structural depth — inline `(a)/(b)` or `(i)/(ii)` tokens embedded in prose that make sub-items invisible to `extract_graph.py` and T1. Run before T1 and before graph extraction; any `has_inline: true, inline_count >= 2` item must be split into separate structural nodes first.
