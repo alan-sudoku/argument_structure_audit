@@ -1,3 +1,8 @@
+---
+title: T1 Execution Strip
+description: AI template to apply the T1 run phase of the argument structure audit framework. See specification.md for more guidelines.
+---
+
 # Argument Structure Audit — T1 Execution Strip
 
 *v2.0 · Retraction log: [retraction_log.md](retraction_log.md)*

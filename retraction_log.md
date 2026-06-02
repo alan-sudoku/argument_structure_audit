@@ -1,3 +1,8 @@
+---
+title: Argument Structure Audit — Retraction Log
+description: Every retracted claim, overclaimed scope, and removed research pointer for specification.md
+---
+
 # Argument Structure Audit — Retraction Log
 
 Every retracted check, pass condition, scope rule, or recovery edge from `specification.md` and `t1_strip.md`. The log is the negative channel of the methodology — what was probed and found structurally defective after adversarial audit. It carries boundary information: what the methodology cannot claim constrains what it can claim.

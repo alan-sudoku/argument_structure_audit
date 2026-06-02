@@ -1,3 +1,8 @@
+---
+title: Argument Structure Audit — Blank-AI Usage Assessment Prompt
+description: AI prompt for a blank session to assess how AI processed and used the template.
+---
+
 # Argument Structure Audit — Blank-AI Usage Assessment Prompt
 
 *Claim (task):* You have just applied `specification.md` to a document. Answer the questions below about how you processed and used the template — not about the document you audited. The subject of this assessment is your own usage of the template, not its correctness as an artifact.

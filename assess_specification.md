@@ -1,3 +1,8 @@
+---
+title: Argument Structure Audit — Specification Assessment Prompt
+description: AI audit prompt designed to produce an adversarial, high-precision audit — not a summary or a validation for specification.md
+---
+
 # Argument Structure Audit — Specification Assessment Prompt
 
 **Role:** 

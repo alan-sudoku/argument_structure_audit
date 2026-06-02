@@ -50,7 +50,7 @@ State:
 
 ### Tool changes (`tools/`)
 
-1. Run the test suite — all 44 tests must pass before and after the change:
+1. Run the test suite — all tests must pass before and after the change:
    ```bash
    python3 tools/test_suite.py
    ```

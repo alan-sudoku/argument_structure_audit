@@ -1,3 +1,8 @@
+---
+title: T1 Execution Strip — Verification Checklist
+description: Verification checklist after t1_strip.md run.
+---
+
 # T1 Execution Strip — Verification Checklist
 
 *Purpose: targeted yes/no verification of known failure modes in `t1_strip.md`. Use after any revision to the strip. Replaces open-ended blank-AI assessment (archived) for ongoing maintenance.*

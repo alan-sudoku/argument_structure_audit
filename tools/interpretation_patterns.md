@@ -1,3 +1,8 @@
+---
+title: Argument Structure Audit — Interpretation Patterns
+description: Findings that require interpretation before acting. Each pattern describes a tool output that looks actionable on its face but requires a triage step before repair.
+---
+
 # Argument Structure Audit — Interpretation Patterns
 
 Findings that require interpretation before acting. Each pattern describes a tool output that looks actionable on its face but requires a triage step before repair.

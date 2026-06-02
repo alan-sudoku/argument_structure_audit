@@ -1,3 +1,8 @@
+---
+title: Argument Structure Audit Specification
+description: Canonical specification for argument structure audit framework. Defines all check pass conditions, decision logic, scope-out rules, and recovery edges authoritatively.
+---
+
 # Argument Structure Audit Specification — Structural Navigability and Compliance Self-Check
 
 *v2.0 · Retraction log: [retraction_log.md](retraction_log.md)*
