@@ -21,19 +21,19 @@ The audit is diagnostically useful for documents with **at least two levels of e
 The audit has two tiers. T1 checks are executable by a blank AI. T2 checks require a human auditor with domain knowledge of the document.
 
 **Step 1 — Human: fill §0**
-Open `specification.md` and fill in the §0 parameter table for your document: compliance target, consequence unit, numbered item convention, document class. Note which checks to suspend from the scope-out table.
+Open [specification.md](specification.md) and fill in the §0 parameter table for your document: compliance target, consequence unit, numbered item convention, document class. Note which checks to suspend from the scope-out table.
 
 **Step 2 — Human: copy §0 into the strip**
-The strip's §0 contains only the parameters that T1 checks reference directly. Copy those values from Step 1 into `t1_strip.md`. The remaining spec §0 parameters — compliance target definition, failure name, L0/L1 content, audit tier — feed T2 checks and rationale sections; they stay in the spec and are used in Step 4.
+The strip's §0 contains only the parameters that T1 checks reference directly. Copy those values from Step 1 into [t1_strip.md](t1_strip.md). The remaining spec §0 parameters — compliance target definition, failure name, L0/L1 content, audit tier — feed T2 checks and rationale sections; they stay in the spec and are used in Step 4.
 
 **Step 3 — AI: run T1 checks**
-Give `t1_strip.md` to a blank AI. It runs: `RC1` → `CONTENT-TYPE` → `CLAIM-FIRST` → `CONSEQUENCE` → `TYPE-LABEL` → `RC2` → `RC3`. Output: a findings table and a repaired document. Items requiring semantic judgment are marked `[Escalated]` for T2 review.
+Give [t1_strip.md](t1_strip.md) to a blank AI. It runs: `RC1` → `CONTENT-TYPE` → `CLAIM-FIRST` → `CONSEQUENCE` → `TYPE-LABEL` → `RC2` → `RC3`. Output: a findings table and a repaired document. Items requiring semantic judgment are marked `[Escalated]` for T2 review.
 
 **Step 4 — Human: resolve T2 checks and escalations**
-Use `specification.md` — §5 T2 checks, §5.1 decision maps, §6 recovery edge table — to run `MECE`, `LOGIC-TYPE`, `LOAD-TEST`, `HEADING-SYNTHESIS` and resolve any escalated T1 items.
+Use [specification.md](specification.md) — §5 T2 checks, §5.1 decision maps, §6 recovery edge table — to run `MECE`, `LOGIC-TYPE`, `LOAD-TEST`, `HEADING-SYNTHESIS` and resolve any escalated T1 items.
 
 **Step 5 — Generative repairs: use the staging guide**
-For repairs that rewrite or reorder prose, use `repair_guide.md` to stage, audit, and commit candidates rather than writing directly to the source document.
+For repairs that rewrite or reorder prose, use [repair_guide.md](repair_guide.md) to stage, audit, and commit candidates rather than writing directly to the source document.
 
 ---
 
@@ -47,13 +47,13 @@ Machine-assisted graph extraction and T1 checking are in [`tools/`](tools/). See
 
 | File | Role |
 | :--- | :--- |
-| `t1_strip.md` | Start here — the T1 execution instrument; hand to a blank AI with §0 filled |
-| `specification.md` | Canonical reference — full check definitions, T2 checks, decision maps, phase ordering, recovery edges |
-| `repair_guide.md` | Workflow for staging generative repairs before committing to the source document |
-| `retraction_log.md` | Log of retracted and amended check definitions; §Rxx entries (removed) and §Axx entries (precision amendments) |
-| `t1_checklist.md` | Verify the strip remains self-sufficient and executable after any modification |
-| `assess_specification.md` | Adversarial quality gate — run when proposing changes to the specification |
-| `assess_usage.md` | Post-execution probe — assess how well an AI processed and applied the methodology |
+| [t1_strip.md](t1_strip.md) | Start here — the T1 execution instrument; hand to a blank AI with §0 filled |
+| [specification.md](specification.md) | Canonical reference — full check definitions, T2 checks, decision maps, phase ordering, recovery edges |
+| [repair_guide.md](repair_guide.md) | Workflow for staging generative repairs before committing to the source document |
+| [retraction_log.md](retraction_log.md) | Log of retracted and amended check definitions; §Rxx entries (removed) and §Axx entries (precision amendments) |
+| [t1_checklist.md](t1_checklist.md) | Verify the strip remains self-sufficient and executable after any modification |
+| [assess_specification.md](assess_specification.md) | Adversarial quality gate — run when proposing changes to the specification |
+| [assess_usage.md](assess_usage.md) | Post-execution probe — assess how well an AI processed and applied the methodology |
 
 ---
 

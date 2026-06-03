@@ -1,11 +1,11 @@
 ---
 title: Repair Staging Guide — Argument Structure Audit
-description: Companion to `t1_strip.md` and `specification.md`. Governs how generative repairs are staged and audited before being committed to the source document.
+description: Companion to t1_strip.md and specification.md. Governs how generative repairs are staged and audited before being committed to the source document.
 ---
 
 # Repair Staging Guide — Argument Structure Audit
 
-*Companion to `t1_strip.md` and `specification.md`. Governs how generative repairs are staged and audited before being committed to the source document.*
+*Companion to [t1_strip.md](t1_strip.md) and [specification.md](specification.md). Governs how generative repairs are staged and audited before being committed to the source document.*
 
 ---
 

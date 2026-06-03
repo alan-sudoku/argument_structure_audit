@@ -5,7 +5,7 @@ description: Verification checklist after t1_strip.md run.
 
 # T1 Execution Strip — Verification Checklist
 
-*Purpose: targeted yes/no verification of known failure modes in `t1_strip.md`. Use after any revision to the strip. Replaces open-ended blank-AI assessment (archived) for ongoing maintenance.*
+*Purpose: targeted yes/no verification of known failure modes in [t1_strip.md](t1_strip.md) . Use after any revision to the strip. Replaces open-ended blank-AI assessment (archived) for ongoing maintenance.*
 
 *How to use: for each item, read the referenced location in the strip and answer yes or no. A single No is a gap — repair before releasing the strip version.*
 
@@ -98,5 +98,5 @@ Assumed preconditions must be covered by N/A guards or recovery edges — not le
 
 ## 7 — Cross-Document Consistency
 
-- [ ] **Spec (`specification.md`) AI usage modes** — references `t1_strip.md` (correct filename)
-- [ ] **Repair guide (`repair_guide.md`) companion statement** — references `t1_strip.md` (correct filename)
+- [ ] **Spec (`specification.md`) AI usage modes** — references [t1_strip.md](t1_strip.md)  (correct filename)
+- [ ] **Repair guide (`repair_guide.md`) companion statement** — references [t1_strip.md](t1_strip.md)  (correct filename)

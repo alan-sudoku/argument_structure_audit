@@ -10,7 +10,7 @@ description: Canonical specification for argument structure audit framework. Def
 **Document role:** Canonical specification. Defines all check pass conditions, decision logic, scope-out rules, and recovery edges authoritatively.
 
 **AI usage modes:**
-- *Execution (T1 checks only):* use `t1_strip.md` — the T1 execution strip. Do not execute this document directly; competing instruction layers produce unreliable results.
+- *Execution (T1 checks only):* use [t1_strip.md](t1_strip.md)  — the T1 execution strip. Do not execute this document directly; competing instruction layers produce unreliable results.
 - *Reading — explanation, proposal, reference:* this document may be given to an AI in read-only mode. Ask it to explain checks, propose audit strategies, or summarise scope-out rules. Comprehension tasks do not carry the same execution load.
 - *T2 checks (`MECE`, `LOGIC-TYPE`, `LOAD-TEST`, `HEADING-SYNTHESIS`):* require a human domain-expert auditor. AI may not apply these checks reliably.
 
