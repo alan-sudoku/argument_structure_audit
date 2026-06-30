@@ -10,11 +10,11 @@ Node types:
   definition_item — numbered bold items or **Claim:** paragraphs; argument roots
   sub_item       — "- *Type (Topic):*" list items; typed argument leaf nodes
 
-Edge relations (derived from child content_type per specification.md §3):
-  contains  — structural parent→child (headings, Claim sub-items, Unknown)
-  supports  — Argument sub-item → parent claim
-  qualifies — Scope sub-item → parent claim
-  defends   — Closure sub-item → parent claim
+Edge relations (derived from child content_type per specification.md §8):
+  contains     — structural parent→child (headings, Claim sub-items, Unknown)
+  supported_by — parent claim ←  Argument sub-item (claim is supported by argument)
+  qualified_by — parent claim ←  Scope sub-item (claim is qualified by scope)
+  defended_by  — parent claim ←  Closure sub-item (claim is defended by closure)
 
 Requires: pip install networkx
 Optional for DOT output: pip install pydot
@@ -93,9 +93,9 @@ EXTENDED_TYPES_RE = re.compile(r"^\|\s*\*\*Extended content types\*\*\s*\|\s*([^
 # Closure nodes defend against attacks (defends). Claim and Unknown use the
 # structural default (contains) because no directional semantic applies.
 CONTENT_TYPE_TO_RELATION = {
-    "Argument": "supports",
-    "Scope":    "qualifies",
-    "Closure":  "defends",
+    "Argument": "supported_by",
+    "Scope":    "qualified_by",
+    "Closure":  "defended_by",
     "Claim":    "contains",
     "Unknown":  "contains",
 }

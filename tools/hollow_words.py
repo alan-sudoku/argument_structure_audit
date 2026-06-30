@@ -56,6 +56,8 @@ HOLLOW: dict[str, str] = {
     "vital":                    "what fails if this is omitted or incorrect?",
     "paramount":                "paramount compared to what competing priorities?",
     "key":                      "which specific attribute makes this primary?",
+    "critical path":            "critical path to what outcome? what is blocked if this step is delayed or absent?",
+    "essential dependency":     "say what breaks: 'without X, Y cannot proceed' — name X and Y explicitly",
 
     # Vague quantifiers — borrow precision connotation without providing data
     "significantly":            "by how much? provide a threshold or quantitative bound",
@@ -78,13 +80,14 @@ HOLLOW: dict[str, str] = {
     "holistic":                 "as opposed to what decomposition?",
     "foundational":             "what rests on it?",
     "fundamental":              "fundamental to what? what depends on it?",
-    "load-bearing":             "what does it support? what fails if removed?",
+    "load-bearing":             "say what the condition does: 'X is what makes Y possible' or 'without X, Z fails'",
     "nuanced":                  "simpler than what view?",
 
     # Epistemic weasels — weaken the claim they attach to
     "essentially":              "stripped of what? state the precise claim",
     "effectively":              "same as, or approximately same as? say which",
     "arguably":                 "argued by whom, with what support?",
+    "fully":                    "in all respects, or only in some? state which conditions are met and which are not",
     "in many ways":             "name the ways",
 
     # Abstract metaphors — say the actual thing
@@ -123,6 +126,9 @@ HOLLOW: dict[str, str] = {
     "thus":                     "asserts entailment — same question as 'therefore'",
     "definitively":             "what closes off the alternatives? name the proof or exhaustive case analysis",
     "conclusively":             "what excludes competing explanations?",
+    "unconditionally":          "holds under all conditions, or only within the stated scope? name the domain",
+    "rigorous":                 "by which standard? state the criteria that distinguish this from an informal treatment — or remove",
+    "rigorously":               "by which standard? state the criteria that distinguish this from an informal treatment — or remove",
     "necessarily":              "logically necessary, or empirically contingent? state which",
     "it follows that":          "does it follow deductively, or by analogy or induction?",
 
@@ -131,6 +137,7 @@ HOLLOW: dict[str, str] = {
     "well-established":         "established where, by whom, within what scope?",
     "by definition":            "whose definition? where stated? is it applied consistently?",
     "it is known that":         "known to whom? in which literature? within what scope?",
+    "authoritative":            "authoritative by which standard, in which field, and for which claim?",
 
     # Terminology smuggling
     "mathematically":           "which result or theorem? state it — does it apply here without additional assumptions?",
