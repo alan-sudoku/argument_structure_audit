@@ -143,17 +143,17 @@ class TestExtractGraph(unittest.TestCase):
     def test_argument_nodes_have_supports_edge(self):
         for u, v, data in self.G.edges(data=True):
             if self.G.nodes[v].get("content_type") == "Argument":
-                self.assertEqual(data.get("relation"), "supports")
+                self.assertEqual(data.get("relation"), "supported_by")
 
     def test_scope_nodes_have_qualifies_edge(self):
         for u, v, data in self.G.edges(data=True):
             if self.G.nodes[v].get("content_type") == "Scope":
-                self.assertEqual(data.get("relation"), "qualifies")
+                self.assertEqual(data.get("relation"), "qualified_by")
 
     def test_closure_nodes_have_defends_edge(self):
         for u, v, data in self.G.edges(data=True):
             if self.G.nodes[v].get("content_type") == "Closure":
-                self.assertEqual(data.get("relation"), "defends")
+                self.assertEqual(data.get("relation"), "defended_by")
 
     def test_no_orphan_sub_items(self):
         orphans = [

@@ -1,6 +1,6 @@
 # Argument Structure Audit — Tools
 
-Six standalone Python scripts, a hollow-word pre-audit tool, and an interactive notebook for machine-assisted audit of structured argument documents.
+Seven standalone Python scripts and an interactive notebook for machine-assisted audit of structured argument documents.
 
 ---
 
@@ -44,7 +44,7 @@ python tools/structure_depth.py <document.md> --annotate --section <target>
 # 1. Pre-audit — scan for hollow words before structural audit
 python tools/hollow_words.py <document.md> --counts
 
-# 1. Structural gate — catch encoding violations before graphing
+# 2. Structural gate — catch encoding violations before graphing
 python tools/t1_check.py <document.md>
 
 # 2. Section overview — identify heavy sections before drilling
@@ -177,9 +177,9 @@ Report: confirm the file was written. State total node and edge count from the h
 
 ---
 
-## Interpreting tool output — `sample_usage.md`
+## Interpreting tool output — `interpretation_patterns.md`
 
-Tool output requires a triage step before acting. Raw findings conflate structural defects, false positives, and by-design patterns that look identical at the output layer. [`sample_usage.md`](sample_usage.md) documents five interpretation patterns encountered in practice:
+Tool output requires a triage step before acting. Raw findings conflate structural defects, false positives, and by-design patterns that look identical at the output layer. [`interpretation_patterns.md`](interpretation_patterns.md) documents five interpretation patterns encountered in practice:
 
 | Pattern | Risk if skipped |
 | :--- | :--- |
@@ -189,7 +189,7 @@ Tool output requires a triage step before acting. Raw findings conflate structur
 | `shared` N≥5 — OQ nodes vs. trunk nodes | Unnecessary independence analysis — OQ nodes at high N are by design |
 | `refs` unresolved targets — external dependency vs. stale label | Missed stale reference — external deps and stale labels require different resolutions |
 
-Each entry in `sample_usage.md` gives: what the tool reports, the false-positive risk, and a triage rule.
+Each entry in `interpretation_patterns.md` gives: what the tool reports, the false-positive risk, and a triage rule.
 
 ---
 
@@ -283,6 +283,8 @@ No third-party dependencies. Exit 0 always — review aid, not a gate.
 
 ---
 
+---
+
 ## `extract_graph.py` — Graph extractor
 
 Parses a compliant argument document into a typed directed acyclic graph (DAG).
@@ -297,14 +299,14 @@ Requires `networkx`.
 | `definition_item` | Numbered bold items (`1. **Label**`) or `**Claim:**` paragraphs |
 | `sub_item` | `- *Type (Topic):*` list items |
 
-**Edge relations** (derived from child content type per `specification.md §3`)
+**Edge relations** (derived from child content type per `specification.md §8`)
 
 | Relation | Trigger |
 | :--- | :--- |
 | `contains` | Structural parent → child (headings, Claim sub-items, Unknown) |
-| `supports` | `Argument` sub-item → parent |
-| `qualifies` | `Scope` sub-item → parent |
-| `defends` | `Closure` sub-item → parent |
+| `supported_by` | `Argument` sub-item → parent |
+| `qualified_by` | `Scope` sub-item → parent |
+| `defended_by` | `Closure` sub-item → parent |
 
 **Usage**
 
@@ -508,7 +510,7 @@ The toolchain is a usable baseline for documents that follow the same structural
 
 **What is format-agnostic and needs no changes:**
 
-`build_graph`, `query.py` (all 8 commands), `report.py`, and the notebook operate on the graph after parsing. Any well-formed DAG from any parser variant works with all of these unchanged.
+`build_graph`, `query.py` (all 10 commands), `report.py`, and the notebook operate on the graph after parsing. Any well-formed DAG from any parser variant works with all of these unchanged.
 
 **Where adaptation breaks down:**
 
@@ -520,4 +522,4 @@ The parser assumes relationships are encoded structurally (parent → children v
 python3 tools/test_suite.py
 ```
 
-44 tests cover the full pipeline against a synthetic compliant and non-compliant fixture — graph extraction, edge relations, all 7 T1 checks, all 8 query commands, all 5 report sections, and end-to-end integration. Exit 0 = pipeline intact.
+64 tests cover the full pipeline against a synthetic compliant and non-compliant fixture — graph extraction, edge relations, all 7 T1 checks, all 10 query commands, all 5 report sections, and end-to-end integration. Exit 0 = pipeline intact.
